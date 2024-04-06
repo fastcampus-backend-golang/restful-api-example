@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 )
@@ -15,7 +16,7 @@ func listProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ubah array produk menjadi JSON
-	data, err := json.Marshal(products)
+	res, err := json.Marshal(products)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -28,14 +29,24 @@ func listProduct(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	// kirim response
-	w.Write(data)
+	w.Write(res)
 }
 
 // createProduct akan menambahkan produk baru
 func createProduct(w http.ResponseWriter, r *http.Request) {
-	// ambil nama dan harga produk dari json request
+	// baca request body
+	defer r.Body.Close()
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Gagal membaca data request produk"))
+		return
+	}
+
+	// ubah request body menjadi Product
 	var product Product
-	err := json.NewDecoder(r.Body).Decode(&product)
+	err = json.Unmarshal(reqBody, &product)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -47,13 +58,14 @@ func createProduct(w http.ResponseWriter, r *http.Request) {
 	lastID++
 
 	// gunakan ID terakhir untuk produk yang baru
+	// mencegah ID dimasukkan oleh client
 	product.ID = lastID
 
 	// simpan produk ke database
 	database[product.ID] = product
 
 	// ubah produk menjadi JSON
-	data, err := json.Marshal(product)
+	res, err := json.Marshal(product)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -66,7 +78,7 @@ func createProduct(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	// kirim response
-	w.Write(data)
+	w.Write(res)
 }
 
 // updateProduct akan mengubah data produk
@@ -92,9 +104,19 @@ func updateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// jika ada, baca nama dan harga baru
+	// jika ada, baca request body
+	defer r.Body.Close()
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Gagal membaca data request produk"))
+		return
+	}
+
+	// ubah request body menjadi Product
 	var newProduct Product
-	err = json.NewDecoder(r.Body).Decode(&newProduct)
+	err = json.Unmarshal(reqBody, &newProduct)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -123,8 +145,8 @@ func updateProduct(w http.ResponseWriter, r *http.Request) {
 	// simpan data produk yang telah diubah
 	database[productIDInt] = product
 
-	// ubah data produk menjadi JSON
-	data, err := json.Marshal(product)
+	// ubah res produk menjadi JSON
+	res, err := json.Marshal(product)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -137,7 +159,7 @@ func updateProduct(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	// kirim response
-	w.Write(data)
+	w.Write(res)
 }
 
 // deleteProduct akan menghapus produk
