@@ -1,4 +1,4 @@
-# RESTfult API Example
+# RESTful API Example
 ## Cara Menjalankan
 1. Clone repository ini
 ```bash
